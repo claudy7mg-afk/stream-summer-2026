@@ -2,14 +2,16 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js';
 import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js';
+import streamPosterUrl from './res/STREAM Poster 2026.JPG';
 
 // ==================== SCENE SETUP ====================
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x1a1a2e);
 scene.fog = new THREE.FogExp2(0x1a1a2e, 0.008);
+scene.position.y = -10;
 
 const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 8, 18);
+camera.position.set(0, 4.5, 18);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
 renderer.setSize(window.innerWidth, window.innerHeight);
@@ -24,7 +26,11 @@ root.appendChild(renderer.domElement);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.05;
+controls.target.set(0, 1.5, 0);
 controls.maxPolarAngle = Math.PI / 2.1;
+// Keep the camera on the front side of the lab so the back wall stays hidden.
+controls.minAzimuthAngle = -Math.PI / 2.8;
+controls.maxAzimuthAngle = Math.PI / 2.8;
 controls.minDistance = 5;
 controls.maxDistance = 35;
 
@@ -88,9 +94,10 @@ scene.add(gridHelper);
 
 // Back wall
 const wallMat = new THREE.MeshStandardMaterial({ color: 0x222238, roughness: 0.8 });
-const backWall = new THREE.Mesh(new THREE.BoxGeometry(60, 15, 0.3), wallMat);
+const backWallHeight = 30;
+const backWall = new THREE.Mesh(new THREE.BoxGeometry(60, backWallHeight, 0.3), wallMat);
 backWall.name = 'backWall';
-backWall.position.set(0, 7.5, -15);
+backWall.position.set(0, backWallHeight / 2, -15);
 backWall.receiveShadow = true;
 scene.add(backWall);
 
@@ -161,7 +168,7 @@ function createLabel(text, position, color = '#00ff88') {
 createLabel('🧬 BIOLOGY', new THREE.Vector3(-10, 7.5, -5), '#00ff88');
 createLabel('⚗️ CHEMISTRY', new THREE.Vector3(0, 7.5, -5), '#4488ff');
 createLabel('⚡ PHYSICS', new THREE.Vector3(10, 7.5, -5), '#ff4466');
-createLabel('🔬 EXPERIMENT ZONE', new THREE.Vector3(0, 7.5, 5), '#ffcc00');
+const experimentZoneLabel = createLabel('🔬 EXPERIMENT ZONE', new THREE.Vector3(0, 7.5, 5), '#ffcc00');
 
 // ==================== BIOLOGY STATION ====================
 // DNA Double Helix
@@ -554,102 +561,173 @@ prismGroup.add(whiteBeam);
 prismGroup.position.set(8, 5, -6);
 scene.add(prismGroup);
 
-// ==================== CENTRAL EXPERIMENT - ATP Synthesis ====================
-const atpGroup = new THREE.Group();
-atpGroup.name = 'atpSynthesis';
-// ATP Synthase - Rotary Motor Enzyme
-const synthaseBase = new THREE.Mesh(new THREE.CylinderGeometry(0.8, 0.8, 0.15, 24), 
-  new THREE.MeshStandardMaterial({ color: 0x664488, emissive: 0x664488, emissiveIntensity: 0.2 })
+// ==================== CENTRAL EXPERIMENT - STREAM POSTER ====================
+const posterTexture = new THREE.TextureLoader().load(streamPosterUrl);
+posterTexture.colorSpace = THREE.SRGBColorSpace;
+posterTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+const streamPoster = new THREE.Group();
+streamPoster.name = 'streamPoster';
+
+const posterWidth = 6.8;
+const posterHeight = 2.9;
+const posterFrameDepth = 0.12;
+const posterBaseY = 5.35;
+const backWallWidth = 60;
+const wallPosterHeight = backWallHeight;
+const wallPosterWidth = backWallWidth * 0.62;
+const wallPosterDisplayHeight = wallPosterHeight * 0.78;
+const wallPosterBaseY = 18;
+const wallPosterBaseZ = -13.9;
+const experimentZoneVisible = false;
+
+const posterFrame = new THREE.Mesh(
+  new THREE.BoxGeometry(posterWidth, posterHeight, posterFrameDepth),
+  new THREE.MeshStandardMaterial({ color: 0x151522, metalness: 0.25, roughness: 0.75 })
 );
-synthaseBase.name = 'synthaseBase';
-atpGroup.add(synthaseBase);
+posterFrame.name = 'streamPoster_frame';
+streamPoster.add(posterFrame);
 
-// Membrane
-const membraneMat = new THREE.MeshStandardMaterial({ color: 0x886644, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
-const membrane = new THREE.Mesh(new THREE.BoxGeometry(4, 0.15, 3), membraneMat);
-membrane.name = 'membrane';
-atpGroup.add(membrane);
-
-// F0 subunit (in membrane)
-const f0 = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.5, 12), 
-  new THREE.MeshStandardMaterial({ color: 0xaa66cc, emissive: 0xaa66cc, emissiveIntensity: 0.3 })
+const posterMesh = new THREE.Mesh(
+  new THREE.PlaneGeometry(posterWidth - 0.32, posterHeight - 0.28),
+  new THREE.MeshStandardMaterial({ map: posterTexture, roughness: 0.8, metalness: 0.05 })
 );
-f0.name = 'f0Subunit';
-atpGroup.add(f0);
+posterMesh.name = 'streamPoster_art';
+posterMesh.position.z = posterFrameDepth / 2 + 0.01;
+streamPoster.add(posterMesh);
 
-// Central stalk (gamma subunit)
-const gamma = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 1.5, 8),
-  new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0.3 })
+const posterStand = new THREE.Mesh(
+  new THREE.BoxGeometry(0.2, 0.28, 0.2),
+  metalMat
 );
-gamma.name = 'gammaSubunit';
-gamma.position.y = 0.82;
-atpGroup.add(gamma);
+posterStand.name = 'streamPoster_stand';
+posterStand.position.set(0, -1.49, -0.08);
+streamPoster.add(posterStand);
 
-// F1 head (alpha/beta subunits)
-const f1Group = new THREE.Group();
-f1Group.name = 'f1Head';
-for (let i = 0; i < 6; i++) {
-  const angle = (i / 6) * Math.PI * 2;
-  const subunit = new THREE.Mesh(
-    new THREE.SphereGeometry(0.25, 12, 12),
-    new THREE.MeshStandardMaterial({ 
-      color: i % 2 === 0 ? 0x4488ff : 0x44ff88, 
-      emissive: i % 2 === 0 ? 0x4488ff : 0x44ff88, 
-      emissiveIntensity: 0.2 
-    })
-  );
-  subunit.name = 'f1Subunit_' + i;
-  subunit.position.set(Math.cos(angle) * 0.4, 0, Math.sin(angle) * 0.4);
-  f1Group.add(subunit);
+const posterBase = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.65, 0.75, 0.14, 20),
+  metalMat
+);
+posterBase.name = 'streamPoster_base';
+posterBase.position.set(0, -1.72, -0.08);
+streamPoster.add(posterBase);
+
+streamPoster.position.set(0, posterBaseY, 5);
+streamPoster.rotation.x = -0.08;
+scene.add(streamPoster);
+
+const wallPoster = new THREE.Group();
+wallPoster.name = 'streamPosterWall';
+
+const wallPosterTexture = posterTexture.clone();
+wallPosterTexture.colorSpace = THREE.SRGBColorSpace;
+wallPosterTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+const wallAspect = wallPosterWidth / wallPosterDisplayHeight;
+const posterAspect = 3756 / 1518;
+if (wallAspect > posterAspect) {
+  wallPosterTexture.repeat.set(posterAspect / wallAspect, 1);
+  wallPosterTexture.offset.set((1 - wallPosterTexture.repeat.x) / 2, 0);
+} else {
+  wallPosterTexture.repeat.set(1, wallAspect / posterAspect);
+  wallPosterTexture.offset.set(0, (1 - wallPosterTexture.repeat.y) / 2);
 }
-f1Group.position.y = 1.6;
-atpGroup.add(f1Group);
+wallPosterTexture.needsUpdate = true;
 
-// Proton indicators
-const protonGroup = new THREE.Group();
-protonGroup.name = 'protons';
-for (let i = 0; i < 12; i++) {
-  const proton = new THREE.Mesh(
-    new THREE.SphereGeometry(0.06, 8, 8),
-    new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff4444, emissiveIntensity: 0.8 })
-  );
-  proton.name = 'proton_' + i;
-  proton.userData.angle = (i / 12) * Math.PI * 2;
-  proton.userData.speed = 0.5 + Math.random() * 0.5;
-  protonGroup.add(proton);
-}
-atpGroup.add(protonGroup);
+function createRockShape(width, height) {
+  const shape = new THREE.Shape();
+  const points = [
+    [-0.52, -0.08],
+    [-0.48, 0.12],
+    [-0.38, 0.24],
+    [-0.24, 0.3],
+    [-0.08, 0.34],
+    [0.12, 0.32],
+    [0.28, 0.28],
+    [0.44, 0.18],
+    [0.56, 0.02],
+    [0.54, -0.12],
+    [0.42, -0.24],
+    [0.24, -0.3],
+    [0.02, -0.32],
+    [-0.18, -0.3],
+    [-0.36, -0.22],
+    [-0.5, -0.12]
+  ];
 
-// ATP molecules produced
-for (let i = 0; i < 3; i++) {
-  const atpMol = new THREE.Group();
-  atpMol.name = 'atpMolecule_' + i;
-  // Adenine base
-  const adenine = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.05), 
-    new THREE.MeshStandardMaterial({ color: 0x00aa44, emissive: 0x00aa44, emissiveIntensity: 0.4 }));
-  adenine.name = 'adenine_' + i;
-  atpMol.add(adenine);
-  // Ribose sugar
-  const ribose = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.1, 0.05),
-    new THREE.MeshStandardMaterial({ color: 0xffaa00, emissive: 0xffaa00, emissiveIntensity: 0.3 }));
-  ribose.name = 'ribose_' + i;
-  ribose.position.x = 0.15;
-  atpMol.add(ribose);
-  // Three phosphate groups
-  for (let p = 0; p < 3; p++) {
-    const phosphate = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8),
-      new THREE.MeshStandardMaterial({ color: 0xff4444, emissive: 0xff4444, emissiveIntensity: 0.5 }));
-    phosphate.name = 'phosphate_' + i + '_' + p;
-    phosphate.position.x = 0.3 + p * 0.15;
-    atpMol.add(phosphate);
+  shape.moveTo(points[0][0] * width, points[0][1] * height);
+  for (let i = 0; i < points.length; i++) {
+    const current = points[i];
+    const next = points[(i + 1) % points.length];
+    const midX = ((current[0] + next[0]) / 2) * width;
+    const midY = ((current[1] + next[1]) / 2) * height;
+    shape.quadraticCurveTo(current[0] * width, current[1] * height, midX, midY);
   }
-  atpMol.position.set(1.5 + i * 0.8, 2, 0);
-  atpMol.userData.floatOffset = i * 2;
-  atpGroup.add(atpMol);
+
+  return shape;
 }
 
-atpGroup.position.set(0, 4, 5);
-scene.add(atpGroup);
+function createRockShapeGeometry(width, height) {
+  const shape = createRockShape(width, height);
+
+  const geometry = new THREE.ShapeGeometry(shape, 48);
+  geometry.computeBoundingBox();
+
+  const { min, max } = geometry.boundingBox;
+  const position = geometry.attributes.position;
+  const uv = new Float32Array(position.count * 2);
+
+  for (let i = 0; i < position.count; i++) {
+    const x = position.getX(i);
+    const y = position.getY(i);
+    uv[i * 2] = (x - min.x) / (max.x - min.x);
+    uv[i * 2 + 1] = (y - min.y) / (max.y - min.y);
+  }
+
+  geometry.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return geometry;
+}
+
+const wallPosterDepth = 0.45;
+const wallPosterBody = new THREE.Mesh(
+  new THREE.ExtrudeGeometry(createRockShape(wallPosterWidth, wallPosterDisplayHeight), {
+    depth: wallPosterDepth,
+    bevelEnabled: true,
+    bevelSegments: 3,
+    steps: 1,
+    bevelSize: 0.06,
+    bevelThickness: 0.05
+  }),
+  new THREE.MeshStandardMaterial({
+    color: 0x72685d,
+    roughness: 0.95,
+    metalness: 0.04
+  })
+);
+wallPosterBody.name = 'streamPosterWall_body';
+wallPosterBody.position.z = -0.04;
+wallPoster.add(wallPosterBody);
+
+const wallPosterMesh = new THREE.Mesh(
+  createRockShapeGeometry(wallPosterWidth, wallPosterDisplayHeight),
+  new THREE.MeshStandardMaterial({
+    map: wallPosterTexture,
+    color: 0xffffff,
+    roughness: 0.9,
+    metalness: 0.02
+  })
+);
+wallPosterMesh.name = 'streamPosterWall_art';
+wallPosterMesh.position.z = wallPosterDepth + 0.02;
+wallPoster.add(wallPosterMesh);
+
+wallPoster.position.set(0, wallPosterBaseY, wallPosterBaseZ);
+scene.add(wallPoster);
+
+centralTable.visible = experimentZoneVisible;
+streamPoster.visible = experimentZoneVisible;
+wallPoster.visible = true;
+experimentZoneLabel.visible = experimentZoneVisible;
 
 // ==================== PARTICLE SYSTEMS ====================
 // Floating particles in lab
@@ -723,11 +801,17 @@ const interactiveData = {
     concept: 'Cauchy\'s equation: n(λ) = A + B/λ² + C/λ⁴. This wavelength dependence causes chromatic aberration in lenses. Newton first demonstrated this with prisms in 1666.',
     experiment: 'Change prism material and angle!'
   },
-  'atpSynthesis': {
-    title: '⚡ ATP Synthase (Chemiosmosis)',
-    info: 'ATP synthase is a molecular rotary motor enzyme. Protons (H⁺) flow through F0 subunit down electrochemical gradient, causing rotation of the γ-subunit, which drives conformational changes in F1 to catalyze: ADP + Pi → ATP.',
-    concept: 'The proton-motive force (Δp = ΔΨ - 2.3RT/F · ΔpH) across the inner mitochondrial membrane drives ATP synthesis. ~4 H⁺ per ATP. Oxidative phosphorylation produces ~30-32 ATP per glucose.',
-    experiment: 'Watch the molecular motor in action!'
+  'streamPoster': {
+    title: 'STREAM Poster 2026',
+    info: 'The central experiment table now showcases the STREAM Poster 2026 as a presentation display. It turns the experiment zone into a visual centerpiece rather than a mechanical model.',
+    concept: 'A textured poster plane is a lightweight way to feature detailed artwork inside a 3D scene while keeping the display crisp and easy to read from a distance.',
+    experiment: 'Click the poster to inspect the featured artwork on the table.'
+  },
+  'streamPosterWall': {
+    title: 'STREAM Poster 2026',
+    info: 'A second STREAM Poster 2026 display is now mounted on the back wall, giving the experiment zone a larger gallery-style backdrop.',
+    concept: 'Wall-mounted poster planes help anchor a scene visually and keep detailed artwork legible without needing extra floor or table space.',
+    experiment: 'Click the wall poster to inspect the featured artwork.'
   }
 };
 
@@ -1291,11 +1375,11 @@ window.focusStation = (station) => {
     case 'central':
       target = new THREE.Vector3(0, 5, 5);
       pos = new THREE.Vector3(0, 8, 14);
-      showNotification('📍 Experiment Zone — ATP Synthesis');
+      showNotification('📍 Experiment Zone — STREAM Poster 2026');
       break;
   }
   animateCamera(pos, target);
-  document.getElementById('experiment-controls').style.display = 'block';
+  document.getElementById('experiment-controls').style.display = 'none';
 };
 
 window.resetCamera = () => {
@@ -1600,32 +1684,14 @@ function animate() {
     }
   });
   
-  // ATP Synthase rotation
-  const f1Head = atpGroup.children.find(c => c.name === 'f1Head');
-  const gammaSubunit = atpGroup.children.find(c => c.name === 'gammaSubunit');
-  const f0Subunit = atpGroup.children.find(c => c.name === 'f0Subunit');
-  if (f1Head) f1Head.rotation.y = elapsed * atpSpeedVal * 2;
-  if (gammaSubunit) gammaSubunit.rotation.y = elapsed * atpSpeedVal * 2;
-  if (f0Subunit) f0Subunit.rotation.y = elapsed * atpSpeedVal * 2;
-  
-  // Proton flow
-  protonGroup.children.forEach(child => {
-    if (child.userData.angle !== undefined) {
-      child.userData.angle += 0.02 * atpSpeedVal * child.userData.speed;
-      const r = 1.2;
-      child.position.x = Math.cos(child.userData.angle) * r;
-      child.position.z = Math.sin(child.userData.angle) * r;
-      child.position.y = -0.5 + Math.sin(child.userData.angle * 2) * 0.3;
-    }
-  });
-  
-  // ATP molecules float
-  atpGroup.children.forEach(child => {
-    if (child.name && child.name.startsWith('atpMolecule')) {
-      child.position.y = 2 + Math.sin(elapsed * 0.5 + child.userData.floatOffset) * 0.3;
-      child.rotation.y = elapsed * 0.3;
-    }
-  });
+  // Poster display slight idle motion
+  streamPoster.position.y = posterBaseY + Math.sin(elapsed * 0.7) * 0.05;
+
+  // Floating wall poster idle drift
+  wallPoster.position.y = wallPosterBaseY + Math.sin(elapsed * 0.65) * 0.32;
+  wallPoster.position.z = wallPosterBaseZ + Math.cos(elapsed * 0.55) * 0.14;
+  wallPoster.rotation.z = Math.sin(elapsed * 0.4) * 0.045;
+  wallPoster.rotation.y = Math.sin(elapsed * 0.3) * 0.08;
   
   // Bunsen burner flame flicker
   const flameObj = bunsenGroup.children.find(c => c.name === 'bunsenFlame');
