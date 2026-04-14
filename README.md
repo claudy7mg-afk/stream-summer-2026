@@ -35,4 +35,4 @@ Then in GitHub:
 2. Set `Source` to `GitHub Actions`
 3. Push to `main` again if needed
 
-Your site will be published automatically after the workflow completes.
+Your site will be published automatically after the workflow completes
