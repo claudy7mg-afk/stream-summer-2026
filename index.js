@@ -71,7 +71,9 @@ scene.add(pointLight2);
 
 // ==================== MATERIALS ====================
 const floorMat = new THREE.MeshStandardMaterial({ color: 0x2a2a3e, roughness: 0.3, metalness: 0.1 });
-const tableMat = new THREE.MeshStandardMaterial({ color: 0x3a3a4e, roughness: 0.4, metalness: 0.2 });
+const lightWoodTableMat = new THREE.MeshStandardMaterial({ color: 0x8a6a4f, roughness: 0.68, metalness: 0.06 });
+const walnutTableMat = new THREE.MeshStandardMaterial({ color: 0x5a3f2c, roughness: 0.7, metalness: 0.06 });
+const beigeTableMat = new THREE.MeshStandardMaterial({ color: 0x8f8170, roughness: 0.62, metalness: 0.05 });
 const glassMat = new THREE.MeshPhysicalMaterial({ color: 0xaaddff, transparent: true, opacity: 0.3, roughness: 0.05, metalness: 0.0, transmission: 0.9, thickness: 0.5 });
 const metalMat = new THREE.MeshStandardMaterial({ color: 0x888899, roughness: 0.2, metalness: 0.8 });
 const glowGreen = new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.5 });
@@ -102,11 +104,11 @@ backWall.receiveShadow = true;
 scene.add(backWall);
 
 // ==================== LAB TABLES ====================
-function createTable(x, z, w, d, name) {
+function createTable(x, z, w, d, name, topMaterial) {
   const group = new THREE.Group();
   group.name = name;
   // Tabletop
-  const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.15, d), tableMat);
+  const top = new THREE.Mesh(new THREE.BoxGeometry(w, 0.15, d), topMaterial);
   top.name = name + '_top';
   top.position.y = 3.5;
   top.castShadow = true;
@@ -132,10 +134,10 @@ function createTable(x, z, w, d, name) {
   return group;
 }
 
-const bioTable = createTable(-10, -5, 8, 4, 'bioTable');
-const chemTable = createTable(0, -5, 8, 4, 'chemTable');
-const physTable = createTable(10, -5, 8, 4, 'physTable');
-const centralTable = createTable(0, 5, 12, 5, 'centralTable');
+const bioTable = createTable(-10, -5, 8, 4, 'bioTable', walnutTableMat);
+const chemTable = createTable(0, -5, 8, 4, 'chemTable', walnutTableMat);
+const physTable = createTable(10, -5, 8, 4, 'physTable', walnutTableMat);
+const centralTable = createTable(0, 5, 12, 5, 'centralTable', walnutTableMat);
 
 // ==================== STATION LABELS (Sprite) ====================
 function createLabel(text, position, color = '#00ff88') {
@@ -575,10 +577,10 @@ const posterFrameDepth = 0.12;
 const posterBaseY = 5.35;
 const backWallWidth = 60;
 const wallPosterHeight = backWallHeight;
-const wallPosterWidth = backWallWidth * 0.62;
+const wallPosterWidth = backWallWidth * 0.55;
 const wallPosterDisplayHeight = wallPosterHeight * 0.78;
 const wallPosterBaseY = 18;
-const wallPosterBaseZ = -13.9;
+const wallPosterBaseZ = -13.3;
 const experimentZoneVisible = false;
 
 const posterFrame = new THREE.Mesh(
@@ -1354,27 +1356,31 @@ function updateBeakerColors() {
 }
 
 // ==================== NAVIGATION ====================
+function sceneWorldPoint(x, y, z) {
+  return new THREE.Vector3(x, y, z).add(scene.position);
+}
+
 window.focusStation = (station) => {
   let target, pos;
   switch (station) {
     case 'bio':
-      target = new THREE.Vector3(-10, 5, -5);
-      pos = new THREE.Vector3(-10, 7, 3);
+      target = sceneWorldPoint(-10, 5, -5);
+      pos = sceneWorldPoint(-10, 7, 3);
       showNotification('📍 Biology Station — Click objects to explore');
       break;
     case 'chem':
-      target = new THREE.Vector3(0, 5, -5);
-      pos = new THREE.Vector3(0, 7, 3);
+      target = sceneWorldPoint(0, 5, -5);
+      pos = sceneWorldPoint(0, 7, 3);
       showNotification('📍 Chemistry Station — Click objects to explore');
       break;
     case 'phys':
-      target = new THREE.Vector3(10, 5, -5);
-      pos = new THREE.Vector3(10, 7, 3);
+      target = sceneWorldPoint(10, 5, -5);
+      pos = sceneWorldPoint(10, 7, 3);
       showNotification('📍 Physics Station — Click objects to explore');
       break;
     case 'central':
-      target = new THREE.Vector3(0, 5, 5);
-      pos = new THREE.Vector3(0, 8, 14);
+      target = sceneWorldPoint(0, 5, 5);
+      pos = sceneWorldPoint(0, 8, 14);
       showNotification('📍 Experiment Zone — STREAM Poster 2026');
       break;
   }
@@ -1383,7 +1389,7 @@ window.focusStation = (station) => {
 };
 
 window.resetCamera = () => {
-  animateCamera(new THREE.Vector3(0, 8, 18), new THREE.Vector3(0, 3, 0));
+  animateCamera(new THREE.Vector3(0, 4.5, 18), sceneWorldPoint(0, 11.5, 0));
   document.getElementById('experiment-controls').style.display = 'none';
 };
 
